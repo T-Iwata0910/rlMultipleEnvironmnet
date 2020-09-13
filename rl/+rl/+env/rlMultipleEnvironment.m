@@ -7,12 +7,14 @@ classdef rlMultipleEnvironment < rl.env.MATLABEnvironment
     properties(Access=protected)
         StepNum (1, 1) double {mustBeNonnegative}
         State
+        ContextSequence (:, 1) double {mustBePositive, mustBeInteger}
     end
     
     methods
-        function this = rlMultipleEnvironment(subEnvs)
+        function this = rlMultipleEnvironment(subEnvs, contextSequence)
             arguments
                 subEnvs (1, :) cell
+                contextSequence (:, 1) double {mustBePositive, mustBeInteger}
             end
             
             % Validate subEnvs
@@ -24,46 +26,26 @@ classdef rlMultipleEnvironment < rl.env.MATLABEnvironment
                 end
             end
             
+            % Validate contextSequence
+            if (max(contextSequence) > envNum)
+                error("Context Squence is out of range!!");
+            end
+            
             ObservationInfo = getObservationInfo(subEnvs{1});
             ActionInfo = getActionInfo(subEnvs{1});
             
             this = this@rl.env.MATLABEnvironment(ObservationInfo, ActionInfo);
             
             this.SubEnvironments = subEnvs;
+            this.ContextSequence = contextSequence;
         end
         
         function [Observation,Reward,IsDone,LoggedSignals] = step(this,Action)
-          
-%             if this.StepNum <= 499
-%                 [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{1}.step(Action);
-%             elseif this.StepNum == 500
-%                 this.SubEnvironments{2}.initState = this.State;
-%                 this.SubEnvironments{2}.reset();
-%                 [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{2}.step(Action);
-%             elseif this.StepNum <= 999
-%                 [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{2}.step(Action);
-%             elseif this.StepNum == 1000
-%                 this.SubEnvironments{1}.initState = this.State;
-%                 this.SubEnvironments{1}.reset();
-%                 [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{1}.step(Action);
-%             elseif this.StepNum <= 1500
-%                 [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{1}.step(Action);
-%             end
-            if this.StepNum <= 509
-                [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{1}.step(Action);
-            elseif this.StepNum == 510
-                this.SubEnvironments{2}.initState = this.State;
-                this.SubEnvironments{2}.reset();
-                [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{2}.step(Action);
-            elseif this.StepNum <= 1009
-                [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{2}.step(Action);
-            elseif this.StepNum == 1010
-                this.SubEnvironments{1}.initState = this.State;
-                this.SubEnvironments{1}.reset();
-                [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{1}.step(Action);
-            elseif this.StepNum <= 1500
-                [Observation,Reward,IsDone,LoggedSignals] = this.SubEnvironments{1}.step(Action);
-            end
+            activeEnv = this.SubEnvironments{this.ContextSequence(this.StepNum+1)};
+            
+            activeEnv.State = this.State;
+            [Observation,Reward,IsDone,LoggedSignals] = step(activeEnv, Action);
+            
             this.StepNum = this.StepNum + 1;
             this.State = Observation;
             
@@ -73,11 +55,13 @@ classdef rlMultipleEnvironment < rl.env.MATLABEnvironment
         end
         
         function initialObservation = reset(this)
+            % REVISIT: 初期状態観測はコンテキスト1のものでいいのか?
             initialObservation = this.SubEnvironments{1}.reset();
             for i = 2 : length(this.SubEnvironments)
                 this.SubEnvironments{i}.reset();
             end
             this.StepNum = 0;
+            this.State = initialObservation;
             
             % (optional) use notifyEnvUpdated to signal that the 
             % environment has been updated (e.g. to update visualization)

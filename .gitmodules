@@ -1,0 +1,6 @@
+[submodule "rlDiscreteLQTAgent"]
+	path = rlDiscreteLQTAgent
+	url = https://github.com/T-Iwata0910/RLDiscreteLQT.git
+[submodule "rlAdaptiveModularAgent"]
+	path = rlAdaptiveModularAgent
+	url = https://github.com/T-Iwata0910/rlAdaptiveModularAgent.git

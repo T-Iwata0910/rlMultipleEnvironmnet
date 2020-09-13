@@ -1,10 +1,14 @@
-# 
+# Multiple Environment
+複数のサブ環境が内在する環境
+
+## Description
+
 
 ## Creation
 
 ## Properties
 
-### contextSequence
+### ContextSequence
 $n$ステップ目の状態遷移に使用する環境を指定するためのプロパティ
 $s_k = P^{(i)}(s_k,a_k)$
 $i$: contextSequence(i+1)

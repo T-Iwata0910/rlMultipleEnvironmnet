@@ -8,13 +8,15 @@ classdef rlMultipleEnvironment < rl.env.MATLABEnvironment
         StepNum (1, 1) double {mustBeNonnegative}
         State
         ContextSequence (:, 1) double {mustBePositive, mustBeInteger}
+        InitialStateDistributionContext (1, 1) double {mustBePositive, mustBeInteger} = 1
     end
     
     methods
-        function this = rlMultipleEnvironment(subEnvs, contextSequence)
+        function this = rlMultipleEnvironment(subEnvs, contextSequence, options)
             arguments
                 subEnvs (1, :) cell
                 contextSequence (:, 1) double {mustBePositive, mustBeInteger}
+                options.InitialStateDistributionContext (1, 1) double {mustBePositive, mustBeInteger} = 1;
             end
             
             % Validate subEnvs
@@ -31,6 +33,11 @@ classdef rlMultipleEnvironment < rl.env.MATLABEnvironment
                 error("Context Squence is out of range!!");
             end
             
+            % Validate Initial Distribution Context
+            if (max(options.InitialStateDistributionContext) > envNum)
+                error("Initial Distribution Context is out of range!!");
+            end
+            
             ObservationInfo = getObservationInfo(subEnvs{1});
             ActionInfo = getActionInfo(subEnvs{1});
             
@@ -38,6 +45,7 @@ classdef rlMultipleEnvironment < rl.env.MATLABEnvironment
             
             this.SubEnvironments = subEnvs;
             this.ContextSequence = contextSequence;
+            this.InitialStateDistributionContext = options.InitialStateDistributionContext;
         end
         
         function [Observation,Reward,IsDone,LoggedSignals] = step(this,Action)
@@ -55,10 +63,12 @@ classdef rlMultipleEnvironment < rl.env.MATLABEnvironment
         end
         
         function initialObservation = reset(this)
-            % REVISIT: 初期状態観測はコンテキスト1のものでいいのか?
-            initialObservation = this.SubEnvironments{1}.reset();
-            for i = 2 : length(this.SubEnvironments)
-                this.SubEnvironments{i}.reset();
+            for i = 1 : length(this.SubEnvironments)
+                if (i == this.InitialStateDistributionContext)
+                    initialObservation = this.SubEnvironments{i}.reset();
+                else
+                    this.SubEnvironments{i}.reset();
+                end
             end
             this.StepNum = 0;
             this.State = initialObservation;
